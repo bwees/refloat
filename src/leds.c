@@ -769,10 +769,14 @@ bool leds_init(Leds *leds, CfgHwLeds *hw_cfg, const CfgLeds *cfg, FootpadSensorS
         driver_init = false;
     }
 
-    if (driver_init) {
+    if (driver_init && hw_cfg->type != LED_TYPE_EXTERNAL) {
         driver_init = led_driver_init(
             &leds->led_driver, hw_cfg->pin, hw_cfg->type, hw_cfg->color_order, leds->led_count
         );
+    } else {
+        // indicate that the led driver was not configured, used when LED type is LED_TYPE_EXTERNAL
+        // that way we can still run refloat's internal LED driver and display it with LCM-like processors
+        leds->led_driver.bit_nr = 0;
     }
 
     if (!driver_init) {
@@ -782,7 +786,7 @@ bool leds_init(Leds *leds, CfgHwLeds *hw_cfg, const CfgLeds *cfg, FootpadSensorS
     }
 
     leds->led_data = VESC_IF->malloc(sizeof(uint32_t) * leds->led_count);
-    if (!leds->led_data) {
+    if (!leds->led_data && hw_cfg->type != LED_TYPE_EXTERNAL) {
         log_error("Failed to init LED data, out of memory.");
         led_driver_destroy(&leds->led_driver);
         return false;
@@ -912,7 +916,11 @@ void leds_update(Leds *leds, const State *state, FootpadSensorState fs_state) {
         anim_disabled(leds, &leds->front_strip, current_time);
         anim_disabled(leds, &leds->rear_strip, current_time);
         anim_disabled(leds, &leds->status_strip, current_time);
-        led_driver_paint(&leds->led_driver, leds->led_data, leds->led_count);
+
+        // we have physical LEDS
+        if (leds->led_driver.bit_nr != 0) {
+            led_driver_paint(&leds->led_driver, leds->led_data, leds->led_count);
+        }
         return;
     }
 
@@ -1109,7 +1117,10 @@ void leds_update(Leds *leds, const State *state, FootpadSensorState fs_state) {
         );
     }
 
-    led_driver_paint(&leds->led_driver, leds->led_data, leds->led_count);
+    // we have physical LEDS
+    if (leds->led_driver.bit_nr != 0) {
+        led_driver_paint(&leds->led_driver, leds->led_data, leds->led_count);
+    }
 }
 
 void leds_status_confirm(Leds *leds) {
@@ -1124,7 +1135,10 @@ void leds_status_confirm(Leds *leds) {
 }
 
 void leds_destroy(Leds *leds) {
-    led_driver_destroy(&leds->led_driver);
+    // we have physical LEDS, and thus a driver to destroy
+    if (leds->led_driver.bit_nr != 0) {
+        led_driver_destroy(&leds->led_driver);
+    } 
 
     if (leds->led_data) {
         VESC_IF->free(leds->led_data);
