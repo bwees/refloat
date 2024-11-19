@@ -769,14 +769,10 @@ bool leds_init(Leds *leds, CfgHwLeds *hw_cfg, const CfgLeds *cfg, FootpadSensorS
         driver_init = false;
     }
 
-    if (driver_init && hw_cfg->type != LED_TYPE_EXTERNAL) {
+    if (driver_init) {
         driver_init = led_driver_init(
             &leds->led_driver, hw_cfg->pin, hw_cfg->type, hw_cfg->color_order, leds->led_count
         );
-    } else {
-        // indicate that the led driver was not configured, used when LED type is LED_TYPE_EXTERNAL
-        // that way we can still run refloat's internal LED driver and display it with LCM-like processors
-        leds->led_driver.bit_nr = 0;
     }
 
     if (!driver_init) {
@@ -917,10 +913,8 @@ void leds_update(Leds *leds, const State *state, FootpadSensorState fs_state) {
         anim_disabled(leds, &leds->rear_strip, current_time);
         anim_disabled(leds, &leds->status_strip, current_time);
 
-        // we have physical LEDS
-        if (leds->led_driver.bit_nr != 0) {
-            led_driver_paint(&leds->led_driver, leds->led_data, leds->led_count);
-        }
+        
+        led_driver_paint(&leds->led_driver, leds->led_data, leds->led_count);
         return;
     }
 
@@ -1118,7 +1112,7 @@ void leds_update(Leds *leds, const State *state, FootpadSensorState fs_state) {
     }
 
     // we have physical LEDS
-    if (leds->led_driver.bit_nr != 0) {
+    if (leds->led_driver.bitbuffer) {
         led_driver_paint(&leds->led_driver, leds->led_data, leds->led_count);
     }
 }
@@ -1136,7 +1130,7 @@ void leds_status_confirm(Leds *leds) {
 
 void leds_destroy(Leds *leds) {
     // we have physical LEDS, and thus a driver to destroy
-    if (leds->led_driver.bit_nr != 0) {
+    if (leds->led_driver.bitbuffer) {
         led_driver_destroy(&leds->led_driver);
     } 
 
