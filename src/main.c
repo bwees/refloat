@@ -98,6 +98,7 @@ typedef struct {
     bool parking_brake_active;
 
     Leds leds;
+    lib_mutex led_mutex;
 
     // Lights Control Module - external lights control
     LcmData lcm;
@@ -1550,7 +1551,11 @@ static void led_thd(void *arg) {
     data *d = (data *) arg;
 
     while (!VESC_IF->should_terminate()) {
+        
+        VESC_IF->mutex_lock(d->led_mutex);
         leds_update(&d->leds, &d->state, d->footpad_sensor.state);
+        VESC_IF->mutex_unlock(d->led_mutex);
+
         VESC_IF->sleep_us(1e6 / LEDS_REFRESH_RATE);
     }
 }
@@ -2591,7 +2596,10 @@ static void on_command_received(unsigned char *buffer, unsigned int len) {
         return;
     }
     case COMMAND_GET_LEDS: {
+        // locking the led data structure so we don't have a race condition
+        VESC_IF->mutex_lock(d->led_mutex);
         send_led_data(&d->leds);
+        VESC_IF->mutex_unlock(d->led_mutex);
         return;
     }
     default: {
