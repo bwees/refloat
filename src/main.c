@@ -39,7 +39,9 @@
 
 #include "konami.h"
 
+#include <cstdint>
 #include <math.h>
+#include <stdint.h>
 #include <string.h>
 
 HEADER
@@ -1653,6 +1655,7 @@ enum {
     // commands above 200 are unstable and can change protocol at any time
     COMMAND_GET_RTDATA_2 = 201,
     COMMAND_LIGHTS_CONTROL = 202,
+    COMMAND_GET_LEDS = 203,
 } Commands;
 
 static void send_realtime_data(data *d) {
@@ -2406,6 +2409,39 @@ static void lights_control_response(const CfgLeds *leds) {
     SEND_APP_DATA(buffer, bufsize, ind);
 }
 
+static void send_led_data(const Leds *leds) {
+    // header (2 bytes) + led_count (uint8) + ... (2+1 bytes)
+    // front_start (uint8) + rear_start (uint8) + status_start (uint8) +  ...(3 bytes)
+    // front_length (uint8) + rear_length (uint8) + status_length (uint8)+  ...(3 bytes)
+    // led_data (uint32*count = 4*count)
+    static const int bufsize = 2 + 1 + 3 + 3 + (leds->led_count)*4;
+
+    uint8_t buffer[bufsize];
+    int32_t ind = 0
+
+    // header (2 bytes) + led_count (uint8) + ... (2+1 bytes)
+    buffer[ind++] = 101;  // Package ID
+    buffer[ind++] = COMMAND_GET_LEDS;
+    buffer[ind++] = leds->led_count;
+
+    // front_start (uint8) + rear_start (uint8) + status_start (uint8) +  ...(3 bytes)
+    buffer[ind++] = leds->front_strip.start;
+    buffer[ind++] = leds->rear_strip.start;
+    buffer[ind++] = leds->status_strip.start;
+
+    // front_length (uint8) + rear_length (uint8) + status_length (uint8)+  ...(3 bytes)
+    buffer[ind++] = leds->front_strip.length;
+    buffer[ind++] = leds->rear_strip.length;
+    buffer[ind++] = leds->status_strip.length;
+    
+    // led_data (uint32*count = 4*count)
+    for (int i=0; i<leds->led_count; i++) {
+        buffer_append_uint32(buffer, leds->led_data[i], ind)
+    }
+    
+    SEND_APP_DATA(buffer, bufsize, ind);
+}
+
 // Handler for incoming app commands
 static void on_command_received(unsigned char *buffer, unsigned int len) {
     data *d = (data *) ARG;
@@ -2552,6 +2588,10 @@ static void on_command_received(unsigned char *buffer, unsigned int len) {
     case COMMAND_LIGHTS_CONTROL: {
         lights_control_request(&d->float_conf.leds, &buffer[2], len - 2, &d->lcm);
         lights_control_response(&d->float_conf.leds);
+        return;
+    }
+    case COMMAND_GET_LEDS: {
+        send_led_data(&d->leds)
         return;
     }
     default: {
