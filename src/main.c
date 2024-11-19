@@ -40,6 +40,7 @@
 #include "konami.h"
 
 #include <math.h>
+#include <stdint.h>
 #include <string.h>
 
 HEADER
@@ -2413,38 +2414,15 @@ static void lights_control_response(const CfgLeds *leds) {
 }
 
 static void send_led_data(const Leds *leds) {
-    // header (2 bytes) + led_count (uint8) + ... (2+1 bytes)
-    // front_start (uint8) + rear_start (uint8) + status_start (uint8) +  ...(3 bytes)
-    // front_length (uint8) + rear_length (uint8) + status_length (uint8)+  ...(3 bytes)
+    // data starts at index 9, first 9 bytes are header
+    int32_t ind = 9;
+
     // led_data (uint32*count = 4*count)
-    int bufsize = 2 + 1 + 3 + 3 + (leds->led_count)*4;
-
-    uint8_t* buffer = VESC_IF->malloc(bufsize);
-    int32_t ind = 0;
-
-    // header (2 bytes) + led_count (uint8) + ... (2+1 bytes)
-    buffer[ind++] = 101;  // Package ID
-    buffer[ind++] = COMMAND_GET_LEDS;
-    buffer[ind++] = leds->led_count;
-
-    // front_start (uint8) + rear_start (uint8) + status_start (uint8) +  ...(3 bytes)
-    buffer[ind++] = leds->front_strip.start;
-    buffer[ind++] = leds->rear_strip.start;
-    buffer[ind++] = leds->status_strip.start;
-
-    // front_length (uint8) + rear_length (uint8) + status_length (uint8)+  ...(3 bytes)
-    buffer[ind++] = leds->front_strip.length;
-    buffer[ind++] = leds->rear_strip.length;
-    buffer[ind++] = leds->status_strip.length;
-    
-    // led_data (uint32*count = 4*count)
-    for (int i=0; i<leds->led_count; i++) {
-        buffer_append_uint32(buffer, leds->led_data[i], &ind);
+    for (uint8_t i=0; i<leds->led_count; i++) {
+        buffer_append_uint32(leds->led_comms_buffer, leds->led_data[i], &ind);
     }
     
-    SEND_APP_DATA(buffer, bufsize, ind);
-
-    VESC_IF->free(buffer);
+    SEND_APP_DATA(leds->led_comms_buffer, leds->led_comms_buffer_size, ind);
 }
 
 // Handler for incoming app commands
