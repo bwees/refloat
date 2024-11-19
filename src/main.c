@@ -2415,7 +2415,7 @@ static void send_led_data(const Leds *leds) {
     int bufsize = 2 + 1 + 3 + 3 + (leds->led_count)*4;
 
     uint8_t* buffer = VESC_IF->malloc(bufsize);
-    int32_t ind = 0
+    int32_t ind = 0;
 
     // header (2 bytes) + led_count (uint8) + ... (2+1 bytes)
     buffer[ind++] = 101;  // Package ID
@@ -2434,7 +2434,7 @@ static void send_led_data(const Leds *leds) {
     
     // led_data (uint32*count = 4*count)
     for (int i=0; i<leds->led_count; i++) {
-        buffer_append_uint32(buffer, leds->led_data[i], ind)
+        buffer_append_uint32(buffer, leds->led_data[i], &ind);
     }
     
     SEND_APP_DATA(buffer, bufsize, ind);
@@ -2591,7 +2591,7 @@ static void on_command_received(unsigned char *buffer, unsigned int len) {
         return;
     }
     case COMMAND_GET_LEDS: {
-        send_led_data(&d->leds)
+        send_led_data(&d->leds);
         return;
     }
     default: {
