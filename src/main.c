@@ -39,9 +39,7 @@
 
 #include "konami.h"
 
-#include <cstdint>
 #include <math.h>
-#include <stdint.h>
 #include <string.h>
 
 HEADER
