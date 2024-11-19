@@ -2414,6 +2414,9 @@ static void lights_control_response(const CfgLeds *leds) {
 }
 
 static void send_led_data(const Leds *leds) {
+    // if we dont have a buffer (ie not in external mode), then don't output
+    if (!leds->led_comms_buffer) return;
+
     // data starts at index 9, first 9 bytes are header
     int32_t ind = 9;
 
