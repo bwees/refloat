@@ -2420,6 +2420,11 @@ static void send_led_data(Leds *leds) {
         leds->led_comms_buffer_size = 2 + 1 + 3 + 3 + (leds->led_count)*4;
 
         leds->led_comms_buffer = VESC_IF->malloc(leds->led_comms_buffer_size);
+        if (!leds->led_comms_buffer) {
+            log_error("Failed to allocate memory for LED comms buffer");
+            return;
+        }
+        
         int32_t ind = 0;
 
         // header (2 bytes) + led_count (uint8) + ... (2+1 bytes)
