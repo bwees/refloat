@@ -2424,7 +2424,7 @@ static void send_led_data(Leds *leds) {
 
         // header (2 bytes) + led_count (uint8) + ... (2+1 bytes)
         leds->led_comms_buffer[ind++] = 101;  // Package ID
-        leds->led_comms_buffer[ind++] = 203; // COMMAND_GET_LEDS
+        leds->led_comms_buffer[ind++] = COMMAND_GET_LEDS;
         leds->led_comms_buffer[ind++] = leds->led_count;
 
         // front_start (uint8) + rear_start (uint8) + status_start (uint8) +  ...(3 bytes)
