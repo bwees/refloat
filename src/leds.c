@@ -916,8 +916,6 @@ void leds_update(Leds *leds, const State *state, FootpadSensorState fs_state) {
         anim_disabled(leds, &leds->front_strip, current_time);
         anim_disabled(leds, &leds->rear_strip, current_time);
         anim_disabled(leds, &leds->status_strip, current_time);
-
-        
         led_driver_paint(&leds->led_driver, leds->led_data, leds->led_count);
         return;
     }
@@ -1132,10 +1130,7 @@ void leds_status_confirm(Leds *leds) {
 }
 
 void leds_destroy(Leds *leds) {
-    // we have physical LEDS, and thus a driver to destroy
-    if (leds->led_driver.bitbuffer) {
-        led_driver_destroy(&leds->led_driver);
-    } 
+    led_driver_destroy(&leds->led_driver);
 
     if (leds->led_data) {
         VESC_IF->free(leds->led_data);
