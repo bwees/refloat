@@ -758,8 +758,6 @@ bool leds_init(Leds *leds, CfgHwLeds *hw_cfg, const CfgLeds *cfg, FootpadSensorS
 
     leds->led_count = leds->rear_strip.start + leds->rear_strip.length;
 
-    leds->data_mutex = VESC_IF->mutex_create();
-
     bool driver_init = true;
     if (fs_state == FS_BOTH) {
         log_msg("Both sensors pressed, not initializing LEDs.");
@@ -812,8 +810,6 @@ void leds_update(Leds *leds, const State *state, FootpadSensorState fs_state) {
     if (!leds->led_data) {
         return;
     }
-
-    VESC_IF->mutex_lock(leds->data_mutex);
 
     float current_time = VESC_IF->system_time();
     leds->last_updated = current_time;
@@ -1114,8 +1110,6 @@ void leds_update(Leds *leds, const State *state, FootpadSensorState fs_state) {
     }
 
     led_driver_paint(&leds->led_driver, leds->led_data, leds->led_count);
-
-    VESC_IF->mutex_unlock(leds->data_mutex);
 }
 
 void leds_status_confirm(Leds *leds) {

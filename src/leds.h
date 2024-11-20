@@ -100,8 +100,6 @@ typedef struct {
 
     uint8_t *led_comms_buffer;
     uint8_t led_comms_buffer_size;
-
-    lib_mutex data_mutex;
 } Leds;
 
 bool leds_init(Leds *leds, CfgHwLeds *hw_cfg, const CfgLeds *cfg, FootpadSensorState fs_state);
