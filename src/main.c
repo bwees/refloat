@@ -2432,15 +2432,15 @@ static void send_led_data(Leds *leds) {
         leds->led_comms_buffer[ind++] = COMMAND_GET_LEDS;
         leds->led_comms_buffer[ind++] = leds->led_count;
 
-        // front_start (uint8) + rear_start (uint8) + status_start (uint8) +  ...(3 bytes)
+        // status_start (uint8) + front_start (uint8) + rear_start (uint8)  +  ...(3 bytes)
+        leds->led_comms_buffer[ind++] = leds->status_strip.start;
         leds->led_comms_buffer[ind++] = leds->front_strip.start;
         leds->led_comms_buffer[ind++] = leds->rear_strip.start;
-        leds->led_comms_buffer[ind++] = leds->status_strip.start;
 
-        // front_length (uint8) + rear_length (uint8) + status_length (uint8)+  ...(3 bytes)
+        // status_length (uint8) + front_length (uint8) + rear_length (uint8) +  ...(3 bytes)
+        leds->led_comms_buffer[ind++] = leds->status_strip.length;
         leds->led_comms_buffer[ind++] = leds->front_strip.length;
         leds->led_comms_buffer[ind++] = leds->rear_strip.length;
-        leds->led_comms_buffer[ind++] = leds->status_strip.length;
     };
 
     // data starts at index 9, first 9 bytes are header
