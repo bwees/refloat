@@ -138,7 +138,7 @@ bool led_driver_init(
         return true;
     }
 
-    if (type == LED_TYPE_NONE) {
+    if (type != LED_TYPE_RGB && type != LED_TYPE_RGBW) {
         driver->bitbuffer = NULL;
         driver->bitbuffer_length = 0;
         return false;
