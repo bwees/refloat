@@ -99,7 +99,6 @@ typedef struct {
     bool parking_brake_active;
 
     Leds leds;
-    lib_mutex led_mutex;
 
     // Lights Control Module - external lights control
     LcmData lcm;
@@ -1552,11 +1551,7 @@ static void led_thd(void *arg) {
     data *d = (data *) arg;
 
     while (!VESC_IF->should_terminate()) {
-        
-        VESC_IF->mutex_lock(d->led_mutex);
         leds_update(&d->leds, &d->state, d->footpad_sensor.state);
-        VESC_IF->mutex_unlock(d->led_mutex);
-
         VESC_IF->sleep_us(1e6 / LEDS_REFRESH_RATE);
     }
 }
@@ -2414,16 +2409,47 @@ static void lights_control_response(const CfgLeds *leds) {
 }
 
 static void send_led_data(const Leds *leds) {
-    // if we dont have a buffer (ie not in external mode), then don't output
-    if (!leds->led_comms_buffer) return;
+    // dont output unless we have an led module running
+    if (!leds->led_data) return;
+        
+    // if we dont have a comms buffer lets create it (first run)
+    if (!leds->led_comms_buffer) {
+        // header (2 bytes) + led_count (uint8) + ... (2+1 bytes)
+        // front_start (uint8) + rear_start (uint8) + status_start (uint8) +  ...(3 bytes)
+        // front_length (uint8) + rear_length (uint8) + status_length (uint8)+  ...(3 bytes)
+        // led_data (uint32*count = 4*count)
+        leds->led_comms_buffer_size = 2 + 1 + 3 + 3 + (leds->led_count)*4;
+
+        leds->led_comms_buffer = VESC_IF->malloc(leds->led_comms_buffer_size);
+        int32_t ind = 0;
+
+        // header (2 bytes) + led_count (uint8) + ... (2+1 bytes)
+        leds->led_comms_buffer[ind++] = 101;  // Package ID
+        leds->led_comms_buffer[ind++] = 203; // COMMAND_GET_LEDS
+        leds->led_comms_buffer[ind++] = leds->led_count;
+
+        // front_start (uint8) + rear_start (uint8) + status_start (uint8) +  ...(3 bytes)
+        leds->led_comms_buffer[ind++] = leds->front_strip.start;
+        leds->led_comms_buffer[ind++] = leds->rear_strip.start;
+        leds->led_comms_buffer[ind++] = leds->status_strip.start;
+
+        // front_length (uint8) + rear_length (uint8) + status_length (uint8)+  ...(3 bytes)
+        leds->led_comms_buffer[ind++] = leds->front_strip.length;
+        leds->led_comms_buffer[ind++] = leds->rear_strip.length;
+        leds->led_comms_buffer[ind++] = leds->status_strip.length;
+    };
 
     // data starts at index 9, first 9 bytes are header
     int32_t ind = 9;
+
+    VESC_IF->mutex_lock(leds->data_mutex);
 
     // led_data (uint32*count = 4*count)
     for (uint8_t i=0; i<leds->led_count; i++) {
         buffer_append_uint32(leds->led_comms_buffer, leds->led_data[i], &ind);
     }
+
+    VESC_IF->mutex_unlock(leds->data_mutex);
     
     SEND_APP_DATA(leds->led_comms_buffer, leds->led_comms_buffer_size, ind);
 }
@@ -2578,9 +2604,7 @@ static void on_command_received(unsigned char *buffer, unsigned int len) {
     }
     case COMMAND_GET_LEDS: {
         // locking the led data structure so we don't have a race condition
-        VESC_IF->mutex_lock(d->led_mutex);
         send_led_data(&d->leds);
-        VESC_IF->mutex_unlock(d->led_mutex);
         return;
     }
     default: {

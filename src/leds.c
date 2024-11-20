@@ -758,6 +758,8 @@ bool leds_init(Leds *leds, CfgHwLeds *hw_cfg, const CfgLeds *cfg, FootpadSensorS
 
     leds->led_count = leds->rear_strip.start + leds->rear_strip.length;
 
+    leds->data_mutex = VESC_IF->mutex_create();
+
     bool driver_init = true;
     if (fs_state == FS_BOTH) {
         log_msg("Both sensors pressed, not initializing LEDs.");
@@ -790,40 +792,6 @@ bool leds_init(Leds *leds, CfgHwLeds *hw_cfg, const CfgLeds *cfg, FootpadSensorS
 
     memset(leds->led_data, 0, sizeof(uint32_t) * leds->led_count);
 
-    if (hw_cfg->type == LED_TYPE_EXTERNAL) {
-        // Allocate the LED communication buffer so we can just copy data in
-        // instead of allocating a new buffer every time its called (30hz)
-
-        // header (2 bytes) + led_count (uint8) + ... (2+1 bytes)
-        // front_start (uint8) + rear_start (uint8) + status_start (uint8) +  ...(3 bytes)
-        // front_length (uint8) + rear_length (uint8) + status_length (uint8)+  ...(3 bytes)
-        // led_data (uint32*count = 4*count)
-        int bufsize = 2 + 1 + 3 + 3 + (leds->led_count)*4;
-
-        leds->led_comms_buffer = VESC_IF->malloc(bufsize);
-        int32_t ind = 0;
-
-        // header (2 bytes) + led_count (uint8) + ... (2+1 bytes)
-        leds->led_comms_buffer[ind++] = 101;  // Package ID
-        leds->led_comms_buffer[ind++] = 203; // COMMAND_GET_LEDS
-        leds->led_comms_buffer[ind++] = leds->led_count;
-
-        // front_start (uint8) + rear_start (uint8) + status_start (uint8) +  ...(3 bytes)
-        leds->led_comms_buffer[ind++] = leds->front_strip.start;
-        leds->led_comms_buffer[ind++] = leds->rear_strip.start;
-        leds->led_comms_buffer[ind++] = leds->status_strip.start;
-
-        // front_length (uint8) + rear_length (uint8) + status_length (uint8)+  ...(3 bytes)
-        leds->led_comms_buffer[ind++] = leds->front_strip.length;
-        leds->led_comms_buffer[ind++] = leds->rear_strip.length;
-        leds->led_comms_buffer[ind++] = leds->status_strip.length;
-
-        leds->led_comms_buffer_size = bufsize;
-    } else {
-        leds->led_comms_buffer = NULL;
-        leds->led_comms_buffer_size = 0;
-    }
-
     leds_configure(leds, cfg);
 
     return true;
@@ -844,6 +812,8 @@ void leds_update(Leds *leds, const State *state, FootpadSensorState fs_state) {
     if (!leds->led_data) {
         return;
     }
+
+    VESC_IF->mutex_lock(leds->data_mutex);
 
     float current_time = VESC_IF->system_time();
     leds->last_updated = current_time;
@@ -1145,10 +1115,9 @@ void leds_update(Leds *leds, const State *state, FootpadSensorState fs_state) {
         );
     }
 
-    // we have physical LEDS
-    if (leds->led_driver.bitbuffer) {
-        led_driver_paint(&leds->led_driver, leds->led_data, leds->led_count);
-    }
+    led_driver_paint(&leds->led_driver, leds->led_data, leds->led_count);
+
+    VESC_IF->mutex_unlock(leds->data_mutex);
 }
 
 void leds_status_confirm(Leds *leds) {
