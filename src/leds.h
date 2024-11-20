@@ -21,6 +21,7 @@
 #include "footpad_sensor.h"
 #include "led_driver.h"
 #include "state.h"
+#include "vesc_c_if.h"
 
 #define LEDS_REFRESH_RATE 30
 

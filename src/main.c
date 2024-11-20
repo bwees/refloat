@@ -2407,7 +2407,7 @@ static void lights_control_response(const CfgLeds *leds) {
     SEND_APP_DATA(buffer, bufsize, ind);
 }
 
-static void send_led_data(const Leds *leds) {
+static void send_led_data(Leds *leds) {
     // dont output unless we have an led module running
     if (!leds->led_data) return;
         
