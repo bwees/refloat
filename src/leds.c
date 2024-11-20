@@ -782,7 +782,7 @@ bool leds_init(Leds *leds, CfgHwLeds *hw_cfg, const CfgLeds *cfg, FootpadSensorS
     }
 
     leds->led_data = VESC_IF->malloc(sizeof(uint32_t) * leds->led_count);
-    if (!leds->led_data && hw_cfg->type != LED_TYPE_EXTERNAL) {
+    if (!leds->led_data) {
         log_error("Failed to init LED data, out of memory.");
         led_driver_destroy(&leds->led_driver);
         return false;
