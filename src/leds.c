@@ -886,7 +886,6 @@ void leds_update(Leds *leds, const State *state, FootpadSensorState fs_state) {
     if (leds->status_idle_blend > 0.0f) {
         status_brightness = fminf(status_brightness, leds->cfg->status_idle.brightness);
     }
-    rate_limitf(&leds->status_strip.brightness, status_brightness, BR_RATE);
 
     // fade status brightness based on current rpm to off once moving
     // not when running in flywheel mode, low battery, or duty cycle
@@ -897,7 +896,7 @@ void leds_update(Leds *leds, const State *state, FootpadSensorState fs_state) {
 
         if (
             erpm > 250 && // moving - TODO: configurable
-            battery < leds->cfg->status.red_bar_percentage && // not low battery
+            battery > leds->cfg->status.red_bar_percentage && // not low battery
             duty < leds->duty_threshold // not high duty cycle
         ) {
             // fade out over span of 250-1000 erpm
@@ -905,6 +904,7 @@ void leds_update(Leds *leds, const State *state, FootpadSensorState fs_state) {
         }
     }
 
+    rate_limitf(&leds->status_strip.brightness, status_brightness, BR_RATE);
 
     // front brightness
     if (status_on_front) {
