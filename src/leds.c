@@ -649,10 +649,10 @@ bool leds_init(Leds *leds, CfgHwLeds *hw_cfg, const CfgLeds *cfg, FootpadSensorS
     leds->led_count = leds->rear_strip.start + leds->rear_strip.length;
 
     bool driver_init = true;
-    if (fs_state == FS_BOTH) {
-        log_msg("Both sensors pressed, not initializing LEDs.");
-        driver_init = false;
-    }
+    // if (fs_state == FS_BOTH) {
+    //     log_msg("Both sensors pressed, not initializing LEDs.");
+    //     driver_init = false;
+    // }
 
     if (hw_cfg->front.count + hw_cfg->rear.count > LEDS_FRONT_AND_REAR_COUNT_MAX) {
         log_error("Front and rear LED counts exceed maximum.");
