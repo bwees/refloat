@@ -22,7 +22,7 @@
 #include "led_driver.h"
 #include "state.h"
 
-#define LEDS_REFRESH_RATE 30
+#define LEDS_REFRESH_RATE 25
 
 #define LEDS_FRONT_AND_REAR_COUNT_MAX 60
 

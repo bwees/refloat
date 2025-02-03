@@ -784,10 +784,9 @@ void leds_update(Leds *leds, const State *state, FootpadSensorState fs_state) {
         float duty = fminf(fabsf(VESC_IF->mc_get_duty_cycle_now() * 10.0f / 9.0f), 1.0f);
         float battery = corrected_battery_percentage();
 
-        if (
-            erpm > 250 && // moving - TODO: configurable
-            battery > leds->cfg->status.red_bar_percentage && // not low battery
-            duty < leds->duty_threshold // not high duty cycle
+        if (erpm > 250 &&  // moving - TODO: configurable
+            battery > leds->cfg->status.red_bar_percentage &&  // not low battery
+            duty < leds->duty_threshold  // not high duty cycle
         ) {
             // fade out over span of 250-1000 erpm
             status_brightness = status_brightness * (1.0f - fminf((erpm - 250) / 750.0f, 1.0f));
